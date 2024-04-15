@@ -1,0 +1,16 @@
+CREATE TABLE classes
+(
+    id INT
+    AUTO_INCREMENT PRIMARY KEY,
+school_id INT NOT NULL,
+    name VARCHAR
+    (255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON
+    UPDATE CURRENT_TIMESTAMP,
+deleted_at TIMESTAMP
+    NULL,
+FOREIGN KEY
+    (school_id) REFERENCES schools
+    (id)
+)ENGINE = InnoDB;
