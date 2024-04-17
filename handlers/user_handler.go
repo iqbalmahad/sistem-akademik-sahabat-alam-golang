@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -44,7 +45,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).SendString(err.Error())
 	}
 
-	return c.Status(http.StatusCreated).Render("templates/users/user_created.html", fiber.Map{"User": user})
+	return c.Redirect("/users")
 }
 
 func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
@@ -53,8 +54,69 @@ func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).SendString(err.Error())
 	}
 
-	// Menggunakan template HTML dengan nama index.gohtml di folder templates/users
-	return c.Render("users/index", fiber.Map{
+	data := fiber.Map{
 		"Users": users,
-	})
+	}
+	// return c.Render("users/index", data)
+	return c.Render("users/index", data, "layouts/main")
+	// return c.Render("layouts/main", data)
+}
+
+func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idUint, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).SendString("Invalid user ID")
+	}
+
+	user, err := h.UserRepo.GetByID(context.Background(), uint(idUint))
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).SendString(err.Error())
+	}
+	data := fiber.Map{
+		"User": user,
+	}
+	// Render tampilan HTML dengan data pengguna
+	return c.Render("users/show", data, "layouts/main")
+}
+
+func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
+	var updateUser models.User
+	if err := c.BodyParser(&updateUser); err != nil {
+		return c.Status(http.StatusBadRequest).SendString("Failed to parse request body")
+	}
+
+	// Validasi input menggunakan validator
+	if err := validate.Struct(updateUser); err != nil {
+		return c.Status(http.StatusBadRequest).SendString(err.Error())
+	}
+
+	// Hash password jika ada perubahan
+	if updateUser.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateUser.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).SendString("Failed to hash password")
+		}
+		updateUser.Password = string(hashedPassword)
+	}
+
+	if err := h.UserRepo.Update(context.Background(), &updateUser); err != nil {
+		return c.Status(http.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return c.Redirect("/users")
+}
+
+func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idUint, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).SendString("Invalid user ID")
+	}
+
+	if err := h.UserRepo.Delete(context.Background(), uint(idUint)); err != nil {
+		return c.Status(http.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return c.Status(http.StatusOK).SendString("User deleted successfully")
 }

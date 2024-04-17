@@ -39,10 +39,16 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	app.Use(cors.New())
 
 	app.Get("/users", userHandler.GetAllUsers)
-	// app.Post("/users", userHandler.CreateUser)
-	// app.Get("/users/:id", userHandler.GetUserByID)
+	app.Post("/users", userHandler.CreateUser)
+	app.Get("/users/:id", userHandler.GetUserByID)
 	// app.Put("/users/:id", userHandler.UpdateUser)
 	// app.Delete("/users/:id", userHandler.DeleteUser)
+	app.Get("/users/create", func(c *fiber.Ctx) error {
+		// Render index
+		return c.Render("users/create", fiber.Map{
+			"Title": "User Create",
+		})
+	})
 
 	app.Get("/students", studentHandler.GetAllStudents)
 	app.Post("/students", studentHandler.CreateStudent)
